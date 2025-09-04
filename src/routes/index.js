@@ -3,6 +3,8 @@ const docsRoute = require('./docs.route');
 const config = require('../config/config');
 const productRoutes = require('./product.route');
 const orderRoutes = require('./order.route');
+const cartRoutes = require('./cart.route');
+const userRoutes = require('./user.route');
 
 const router = express.Router();
 
@@ -16,10 +18,19 @@ const ROUTES = [
     path: '/orders',
     route: orderRoutes,
   },
+
+  {
+    path: '/cart',
+    route: cartRoutes,
+  },
+
+  {
+    path: '/users',
+    route: userRoutes,
+  },
 ];
 
 const devRoutes = [
-  // routes available only in development mode
   {
     path: '/docs',
     route: docsRoute,

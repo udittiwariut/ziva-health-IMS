@@ -1,92 +1,407 @@
+paths:
+  ############################
+  # PRODUCT ROUTES
+  ############################
+  /products:
+    get:
+      tags: [Products]
+      summary: Get all products
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      tags: [Products]
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProduct'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    put:
+      tags: [Products]
+      summary: Update product by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProduct'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}/stock:
+    put:
+      tags: [Products]
+      summary: Update product stock
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductStock'
+      responses:
+        '200':
+          description: Stock updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}/fulfill:
+    post:
+      tags: [Products]
+      summary: Fulfill product (custom logic, uses stock update validation)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductStock'
+      responses:
+        '200':
+          description: Product fulfilled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/low-stock:
+    get:
+      tags: [Products]
+      summary: Get products with low stock
+      responses:
+        '200':
+          description: Low stock products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  ############################
+  # ORDER ROUTES
+  ############################
+  /{userId}/orders:
+    get:
+      tags: [Orders]
+      summary: Get user order history
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User's order history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /{userId}:
+    post:
+      tags: [Orders]
+      summary: Create a new order for user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /{orderId}/status:
+    put:
+      tags: [Orders]
+      summary: Update order status
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          required: true
+          schema:
+            type: string
+            enum: [confirmed, cancelled]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /{orderId}:
+    get:
+      tags: [Orders]
+      summary: Get order detail by ID
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  ############################
+  # CART ROUTES
+  ############################
+  /cart/{userId}:
+    get:
+      tags: [Cart]
+      summary: Get user cart
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User's cart
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+    post:
+      tags: [Cart]
+      summary: Validate and return user cart
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Cart validated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+
+  /cart/{userId}/{productId}:
+    put:
+      tags: [Cart]
+      summary: Update cart item
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: productId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: qtyChange
+          required: true
+          schema:
+            type: string
+            enum: [INC, DEC]
+      responses:
+        '200':
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+    delete:
+      tags: [Cart]
+      summary: Remove item from cart
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: productId
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Item removed
+
+  ############################
+  # CATEGORY ROUTES
+  ############################
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Get all categories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
 components:
   schemas:
+    ############################
+    # PRODUCT SCHEMAS
+    ############################
+    Product:
+      type: object
+      properties:
+        id: { type: string, example: '68b80a11fb4cab2f8cc413b2' }
+        name: { type: string, example: 'Vitamin C 1000mg' }
+        sku: { type: string, example: 'VITC-1000' }
+        price: { type: number, example: 15.99 }
+        stock_quantity: { type: integer, example: 10 }
+        category_id: { type: string, example: '68b80a0dfb4cab2f8cc413a7' }
+        createdAt: { type: string, format: date-time, example: '2025-09-03T09:27:45.294Z' }
+        updatedAt: { type: string, format: date-time, example: '2025-09-04T04:47:21.680Z' }
+      required: [name, sku, price, category_id]
+
+    CreateProduct:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100, example: 'Vitamin C 1000mg' }
+        sku: { type: string, minLength: 3, maxLength: 50, example: 'VITC-1000' }
+        price: { type: number, minimum: 0, example: 15.99 }
+        stock_quantity: { type: integer, minimum: 0, example: 10 }
+        categoryName: { type: string, example: 'Vitamins' }
+      required: [name, sku, price, categoryName]
+
+    UpdateProduct:
+      type: object
+      properties:
+        name: { type: string }
+        sku: { type: string }
+        price: { type: number }
+        stock_quantity: { type: integer }
+        categoryName: { type: string }
+
+    UpdateProductStock:
+      type: object
+      properties:
+        stock_quantity: { type: integer, minimum: 0, example: 5 }
+      required: [stock_quantity]
+
+    ############################
+    # ORDER SCHEMAS
+    ############################
+    Order:
+      type: object
+      properties:
+        id: { type: string, example: '68b9cf66399120048861c9a6' }
+        user_id: { type: string, example: '68b84bf3fe504c123c97e7ea' }
+        total: { type: number, example: 12.49 }
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+          example: 'confirmed'
+        isDeleted: { type: boolean, example: false }
+        createdAt: { type: string, format: date-time, example: '2025-09-04T17:41:58.263Z' }
+        updatedAt: { type: string, format: date-time, example: '2025-09-04T17:47:47.649Z' }
+      required: [user_id, total]
+
+    OrderItem:
+      type: object
+      properties:
+        id: { type: string, example: '68b9b2ef1d7aee051048a361' }
+        order_id: { type: string, example: '68b9b2ef1d7aee051048a360' }
+        product_id: { type: string, example: '68b80a11fb4cab2f8cc413b3' }
+        quantity: { type: integer, example: 6 }
+        price_at_time: { type: number, example: 12.49 }
+        isDeleted: { type: boolean, example: true }
+        createdAt: { type: string, format: date-time, example: '2025-09-04T15:40:31.299Z' }
+        updatedAt: { type: string, format: date-time, example: '2025-09-04T15:41:02.058Z' }
+      required: [order_id, product_id, quantity, price_at_time]
+
+    ############################
+    # CART SCHEMAS
+    ############################
+    CartItem:
+      type: object
+      properties:
+        id: { type: string, example: '68b9b47a318344207ca03098' }
+        user_id: { type: string, example: '68b84bf3fe504c123c97e7ea' }
+        product_id: { type: string, example: '68b80a11fb4cab2f8cc413b3' }
+        quantity: { type: integer, example: 3 }
+        isDeleted: { type: boolean, example: true }
+        createdAt: { type: string, format: date-time, example: '2025-09-04T15:47:06.654Z' }
+        updatedAt: { type: string, format: date-time, example: '2025-09-04T17:41:58.226Z' }
+      required: [user_id, product_id, quantity]
+
+    ############################
+    # CATEGORY SCHEMAS
+    ############################
+    Category:
+      type: object
+      properties:
+        id: { type: string, example: '68b80a0dfb4cab2f8cc413a7' }
+        name: { type: string, example: 'Vitamins' }
+        description: { type: string, example: 'Daily essential vitamins' }
+      required: [name]
+
+    ############################
+    # USER SCHEMAS
+    ############################
     User:
       type: object
       properties:
-        id:
-          type: string
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-        role:
-          type: string
-          enum: [user, admin]
-      example:
-        id: 5ebac534954b54139806c112
-        email: fake@example.com
-        name: fake name
-        role: user
-
-    Token:
-      type: object
-      properties:
-        token:
-          type: string
-        expires:
-          type: string
-          format: date-time
-      example:
-        token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZWJhYzUzNDk1NGI1NDEzOTgwNmMxMTIiLCJpYXQiOjE1ODkyOTg0ODQsImV4cCI6MTU4OTMwMDI4NH0.m1U63blB0MLej_WfB7yC2FTMnCziif9X8yzwDEfJXAg
-        expires: 2020-05-12T16:18:04.793Z
-
-    AuthTokens:
-      type: object
-      properties:
-        access:
-          $ref: '#/components/schemas/Token'
-        refresh:
-          $ref: '#/components/schemas/Token'
-
-    Error:
-      type: object
-      properties:
-        code:
-          type: number
-        message:
-          type: string
-
-  responses:
-    DuplicateEmail:
-      description: Email already taken
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            code: 400
-            message: Email already taken
-    Unauthorized:
-      description: Unauthorized
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            code: 401
-            message: Please authenticate
-    Forbidden:
-      description: Forbidden
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            code: 403
-            message: Forbidden
-    NotFound:
-      description: Not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            code: 404
-            message: Not found
-
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+        id: { type: string, example: '68b84bf3fe504c123c97e7ea' }
+        name: { type: string, example: 'Jon Snow' }
+        cart:
+          type: array
+          items: { type: string }
+          example: []
+      required: [name]

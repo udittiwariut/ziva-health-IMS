@@ -6,8 +6,6 @@ const convertToObjectId = require('../utils/convertToObjectId');
 const queryProducts = async (filter, options = undefined) => {
   const products = await Products.find(filter);
 
-  if (products.length === 0) throw new ApiError(httpStatus.NOT_FOUND, 'No Products Found');
-
   return products;
 };
 
@@ -38,7 +36,7 @@ const getProductById = async (id) => {
   return Products.findById(productId);
 };
 
-const updateProduct = async (productId, updateBody) => {
+const updateProduct = async (productId, updateBody, session = null) => {
   const product = await getProductById(productId);
   if (!product) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
@@ -52,8 +50,9 @@ const updateProduct = async (productId, updateBody) => {
     // eslint-disable-next-line no-param-reassign
     updateBody.category_id = categoryId;
   }
+
   Object.assign(product, updateBody);
-  const savedProduct = await product.save();
+  const savedProduct = await product.save({ session });
   return savedProduct;
 };
 
@@ -62,20 +61,22 @@ const queryLowStockProduct = async () => {
   return products;
 };
 
-const updateProductStock = async (productId, updateStock) => {
+const updateStock = async (productId, updateStockBody) => {
   const product = await getProductById(productId);
   if (!product) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
   }
-  Object.assign(product, updateStock);
+
+  Object.assign(product, updateStockBody);
   const savedProduct = await product.save();
   return savedProduct;
 };
 
 module.exports = {
   queryProducts,
+  getProductById,
   createProduct,
   updateProduct,
   queryLowStockProduct,
-  updateProductStock,
+  updateStock,
 };

@@ -63,7 +63,8 @@ const updateProductStock = {
     id: Joi.required().custom(objectId),
   }),
   body: Joi.object().keys({
-    stock_quantity: Joi.number().integer().min(0).default(0).messages({
+    stock_quantity: Joi.number().integer().min(0).required().messages({
+      'any.required': 'Stock quantity is required',
       'number.base': 'Stock quantity must be a number',
       'number.min': 'Stock quantity cannot be negative',
     }),

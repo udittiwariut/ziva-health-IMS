@@ -7,10 +7,13 @@ const cors = require('cors');
 const httpStatus = require('http-status');
 const morgan = require('./config/morgan');
 const routes = require('./routes');
+require('./utils/crone');
+
 // const { seedData } = require('./models/seedData');
 
 const { errorConverter, errorHandler } = require('./middlewares/error');
 const ApiError = require('./utils/ApiError');
+require('./utils/purchaseWorker');
 
 const app = express();
 

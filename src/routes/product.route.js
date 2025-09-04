@@ -13,6 +13,8 @@ router
 
 router.route('/:id').put(validate(productValidation.updateProduct), productController.updateProductById);
 
+router.route('/:id/stock').put(validate(productValidation.updateProductStock), productController.updateProductStock);
+
 router.route('/:id/fulfill').post(validate(productValidation.updateProductStock), productController.updateProductById);
 
 router.route('/low-stock').get(productController.getLowStockProducts);

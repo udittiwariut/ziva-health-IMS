@@ -1,7 +1,13 @@
 const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const catchAsync = require('../utils/catchAsync');
-const { queryProducts, createProduct, updateProduct, queryLowStockProduct } = require('../services/product.services');
+const {
+  queryProducts,
+  createProduct,
+  updateProduct,
+  queryLowStockProduct,
+  updateStock,
+} = require('../services/product.services');
 const convertToObjectId = require('../utils/convertToObjectId');
 
 const getProducts = catchAsync(async (req, res) => {
@@ -52,7 +58,7 @@ const getLowStockProducts = catchAsync(async (req, res) => {
 });
 
 const updateProductStock = catchAsync(async (req, res) => {
-  const product = await (req.params.id, req.body);
+  const product = await updateStock(req.params.id, req.body);
 
   res.send(product);
 });

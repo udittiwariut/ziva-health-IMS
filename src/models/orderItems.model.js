@@ -8,6 +8,10 @@ const orderItemsSchema = mongoose.Schema(
     product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, required: true },
     price_at_time: { type: Number, required: true },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

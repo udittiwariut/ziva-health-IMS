@@ -2,23 +2,27 @@ const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
 const createOrder = {
-  body: Joi.object({
-    user_id: Joi.string().required().custom(objectId).messages({
-      'any.required': 'user_id is required',
-    }),
-
-    total: Joi.number().positive().precision(2).required().messages({
-      'number.base': 'Total must be a number',
-      'number.positive': 'Total must be greater than 0',
-      'any.required': 'Total amount is required',
-    }),
-
-    status: Joi.string().valid('pending', 'confirmed', 'cancelled').default('pending').messages({
-      'any.only': 'Status must be one of [pending, confirmed, cancelled]',
-    }),
+  params: Joi.object().keys({
+    userId: Joi.required().custom(objectId),
   }),
 };
 
+const updateOrderStatus = {
+  params: Joi.object().keys({
+    orderId: Joi.required().custom(objectId),
+  }),
+  query: Joi.object().keys({
+    status: Joi.string().valid('confirmed', 'cancelled').required(),
+  }),
+};
+
+const getOrderDetailById = {
+  params: Joi.object().keys({
+    orderId: Joi.required().custom(objectId),
+  }),
+};
 module.exports = {
   createOrder,
+  updateOrderStatus,
+  getOrderDetailById,
 };

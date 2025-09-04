@@ -8,11 +8,12 @@ const productSchema = mongoose.Schema(
     name: { type: String, required: true },
     sku: { type: String, required: true, unique: true },
     price: { type: Number, required: true },
-    reservedStock: { type: Number, default: 0 },
     stock_quantity: { type: Number, required: true, default: 0 },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Categories', required: true },
   },
   {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
     timestamps: true,
   }
 );
