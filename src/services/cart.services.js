@@ -106,39 +106,56 @@ const addItemToUserCartArray = async (userId, cartItemId) => {
 };
 
 const removeItem = async (userId, productId) => {
-  await CartItem.updateOne(
-    { user_id: convertToObjectId(userId), product_id: convertToObjectId(productId) },
-    { $set: { isDeleted: true } }
-  );
-  await Users.findByIdAndUpdate(userId, { $pull: { cart: productId } });
+  const filter = {
+    user_id: convertToObjectId(userId),
+    product_id: convertToObjectId(productId),
+    isDeleted: false, // only remove active items
+  };
+
+  const update = { $set: { isDeleted: true } };
+
+  const cartRes = await CartItem.updateOne(filter, update);
+
+  if (cartRes.matchedCount === 0) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Cart item not found or already removed');
+  }
+
+  await Users.findByIdAndUpdate(userId, { $pull: { cart: convertToObjectId(productId) } });
+
+  return { removed: true, productId };
 };
 
 const updateCartItem = async (userId, productId, qtyChange) => {
   const isValidUserId = await Users.isValidUserId(userId);
-
   if (!isValidUserId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid User Id`);
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid User Id');
   }
 
-  const cartItems = await getCartItem(userId, productId);
+  const cartItem = await getCartItem(userId, productId);
+  if (!cartItem) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Cart item not found');
+  }
 
   const product = await getProductById(productId);
-
-  if (!product) throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
-
-  if (!cartItems) throw new ApiError(httpStatus.BAD_REQUEST, `CartItem Item Not found`);
-
-  Object.assign(cartItems, { quantity: cartItems.quantity + qtyChange });
-
-  if (cartItems.quantity === 0) {
-    await removeItem(userId, productId);
-  } else if (cartItems.quantity > product.stock_quantity)
-    throw new ApiError(httpStatus.BAD_REQUEST, `Stock Un-available ${product.name}`);
-  else {
-    await cartItems.save();
+  if (!product) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
   }
 
-  return cartItems;
+  const newQty = cartItem.quantity + qtyChange;
+
+  if (newQty <= 0) {
+    await removeItem(userId, productId);
+    return { removed: true, productId };
+  }
+
+  if (newQty > product.stock_quantity) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `Stock unavailable for ${product.name}`);
+  }
+
+  cartItem.quantity = newQty;
+  await cartItem.save();
+
+  return cartItem;
 };
 
 const addToCart = async (userId, productId) => {
