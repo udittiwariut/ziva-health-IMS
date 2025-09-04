@@ -6,7 +6,7 @@ const { updateCartItem, addToCart, queryCartItem, removeItem } = require('../ser
 const getUserCart = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const cartItem = await queryCartItem(userId);
-  if (!cartItem) res.send([]);
+
   res.send(cartItem);
 });
 
@@ -16,10 +16,7 @@ const updateCart = catchAsync(async (req, res) => {
   if (query.qtyChange) {
     const numChange = query.qtyChange === 'INC' ? 1 : -1;
     const item = await updateCartItem(userId, productId, numChange);
-    if (item.quantity === 0) {
-      res.status(httpStatus.NO_CONTENT);
-      return;
-    }
+
     res.send(item);
   } else {
     const newItem = await addToCart(userId, productId);

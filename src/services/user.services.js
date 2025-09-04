@@ -48,6 +48,35 @@ const getUserOrders = async (userId) => {
   return orders;
 };
 
+const getCartCount = async (userId) => {
+  const isValidUserId = await Users.isValidUserId(userId);
+
+  if (!isValidUserId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid User Id`);
+  }
+
+  const result = await Users.aggregate([
+    { $match: { _id: convertToObjectId(userId) } },
+    {
+      $project: {
+        itemCount: { $size: '$cart' },
+      },
+    },
+  ]);
+
+  const count = result[0];
+
+  const formatedRes = {
+    count: 0,
+  };
+  if (count) {
+    formatedRes.count = count.itemCount;
+  }
+
+  return formatedRes;
+};
+
 module.exports = {
   getUserOrders,
+  getCartCount,
 };

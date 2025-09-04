@@ -27,12 +27,18 @@ const queryCartItem = async (userId) => {
           as: 'product',
         },
       },
+      { $unwind: '$product' },
       {
-        $unwind: '$product',
+        $addFields: {
+          taxRate: 0.12,
+          itemTotalWithoutTax: { $multiply: ['$quantity', '$product.price'] },
+        },
       },
       {
         $addFields: {
-          itemTotal: { $multiply: ['$quantity', '$product.price'] },
+          itemTotalWithTax: {
+            $multiply: ['$itemTotalWithoutTax', { $add: [1, '$taxRate'] }],
+          },
         },
       },
       {
@@ -42,20 +48,46 @@ const queryCartItem = async (userId) => {
           product_id: 1,
           'product.stock_quantity': 1,
           'product.price': 1,
+          'product.name': 1,
           'product.sku': 1,
-          itemTotal: 1,
+          itemTotalWithoutTax: 1,
+          itemTotalWithTax: 1,
+          taxRate: 1,
         },
       },
       {
         $group: {
           _id: null,
           items: { $push: '$$ROOT' },
-          totalPrice: { $sum: '$itemTotal' },
+          totalPriceWithoutTax: { $sum: '$itemTotalWithoutTax' },
+          totalPriceWithTax: { $sum: '$itemTotalWithTax' },
+          taxRate: { $first: '$taxRate' },
+        },
+      },
+      {
+        $addFields: {
+          itemsCount: { $size: '$items' },
         },
       },
     ]);
 
-    return cartItems[0];
+    const formatedRes = cartItems[0];
+
+    const obj = {
+      items: [],
+      totalPriceWithoutTax: 0,
+      totalPriceWithTax: 0,
+      taxRate: 0,
+    };
+
+    if (formatedRes) {
+      obj['items'] = formatedRes.items;
+      obj['totalPriceWithTax'] = formatedRes.totalPriceWithTax;
+      obj['totalPriceWithoutTax'] = formatedRes.totalPriceWithoutTax;
+      obj['taxRate'] = formatedRes.taxRate;
+    }
+
+    return obj;
   } catch (error) {
     console.log(error);
   }
@@ -100,7 +132,7 @@ const updateCartItem = async (userId, productId, qtyChange) => {
 
   if (cartItems.quantity === 0) {
     await removeItem(userId, productId);
-  } else if (cartItems.quantity > product.availableStock)
+  } else if (cartItems.quantity > product.stock_quantity)
     throw new ApiError(httpStatus.BAD_REQUEST, `Stock Un-available ${product.name}`);
   else {
     await cartItems.save();
@@ -120,7 +152,7 @@ const addToCart = async (userId, productId) => {
     return item;
   }
 
-  if (product.availableStock === 0) throw new ApiError(httpStatus.BAD_REQUEST, `Stock Un-available ${product.name}`);
+  if (product.stock_quantity === 0) throw new ApiError(httpStatus.BAD_REQUEST, `Stock Un-available ${product.name}`);
 
   const cartItem = new CartItem({
     quantity: 1,
