@@ -22,7 +22,7 @@ const updateCart = {
 const removeItem = {
   params: Joi.object().keys({
     userId: Joi.required().custom(objectId),
-    productId: Joi.required().custom(objectId),
+    cartItemId: Joi.required().custom(objectId),
   }),
 };
 

@@ -9,32 +9,29 @@ const {
   updateStock,
 } = require('../services/product.services');
 const convertToObjectId = require('../utils/convertToObjectId');
+const { Categories } = require('../models');
 
 const getProducts = catchAsync(async (req, res) => {
-  const filters = pick(req.query, ['name', 'price', 'category_id', 'minPrice', 'maxPrice']);
+  const filters = pick(req.query, ['search', 'category', 'minPrice', 'maxPrice']);
 
   const query = {};
 
-  if (filters.name) {
-    query.name = { $regex: filters.name, $options: 'i' };
+  if (filters.search) {
+    query.name = { $regex: filters.search, $options: 'i' };
   }
 
   if (filters.minPrice || filters.maxPrice) {
     query.price = {};
-    if (filters.minPrice) query.price.$gte = filters.minPrice;
-    if (filters.maxPrice) query.price.$lte = filters.maxPrice;
+    if (filters.minPrice) query.price.$gte = Number(filters.minPrice);
+    if (filters.maxPrice) query.price.$lte = Number(filters.maxPrice);
   }
 
-  if (filters.category_id) {
-    query.category_id = convertToObjectId(filters.category_id);
+  if (filters.category) {
+    const category_id = await Categories.findOne({ name: filters.category }, { category_id: 1 });
+    query.category_id = category_id;
   }
 
-  if (filters.minStock || filters.maxStock) {
-    query.stock_quantity = {};
-    if (filters.minStock) query.stock_quantity.$gte = filters.minStock;
-    if (filters.maxStock) query.stock_quantity.$lte = filters.maxStock;
-  }
-  const products = await queryProducts(filters, undefined);
+  const products = await queryProducts(query);
 
   res.send(products);
 });

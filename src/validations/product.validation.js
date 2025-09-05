@@ -28,6 +28,8 @@ const createProduct = {
     categoryName: Joi.string().required().messages({
       'any.required': 'Category Name is required',
     }),
+
+    image_url: Joi.string(),
   }),
 };
 

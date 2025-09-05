@@ -21,8 +21,22 @@ const getOrderDetailById = {
     orderId: Joi.required().custom(objectId),
   }),
 };
+
+const getOrderStatus = {
+  params: Joi.object().keys({
+    id: Joi.required(),
+  }),
+};
+
+const getUserOrder = {
+  params: Joi.object().keys({
+    userId: Joi.required(),
+  }),
+};
 module.exports = {
   createOrder,
   updateOrderStatus,
   getOrderDetailById,
+  getOrderStatus,
+  getUserOrder,
 };

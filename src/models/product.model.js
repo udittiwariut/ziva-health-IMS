@@ -9,6 +9,7 @@ const productSchema = mongoose.Schema(
     sku: { type: String, required: true, unique: true },
     price: { type: Number, required: true },
     stock_quantity: { type: Number, required: true, default: 0 },
+    image_url: { type: String, default: '' },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Categories', required: true },
   },
   {

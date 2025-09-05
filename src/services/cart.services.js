@@ -105,11 +105,10 @@ const addItemToUserCartArray = async (userId, cartItemId) => {
   return Users.findByIdAndUpdate(userId, { $push: { cart: cartItemId } });
 };
 
-const removeItem = async (userId, productId) => {
+const removeItem = async (userId, cartItemId) => {
   const filter = {
-    user_id: convertToObjectId(userId),
-    product_id: convertToObjectId(productId),
-    isDeleted: false, // only remove active items
+    _id: convertToObjectId(cartItemId),
+    isDeleted: false,
   };
 
   const update = { $set: { isDeleted: true } };
@@ -120,9 +119,9 @@ const removeItem = async (userId, productId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Cart item not found or already removed');
   }
 
-  await Users.findByIdAndUpdate(userId, { $pull: { cart: convertToObjectId(productId) } });
+  await Users.findByIdAndUpdate(userId, { $pull: { cart: convertToObjectId(cartItemId) } });
 
-  return { removed: true, productId };
+  return { removed: true, cartItemId };
 };
 
 const updateCartItem = async (userId, productId, qtyChange) => {
@@ -144,7 +143,7 @@ const updateCartItem = async (userId, productId, qtyChange) => {
   const newQty = cartItem.quantity + qtyChange;
 
   if (newQty <= 0) {
-    await removeItem(userId, productId);
+    await removeItem(userId, cartItem.id);
     return { removed: true, productId };
   }
 
@@ -165,8 +164,8 @@ const addToCart = async (userId, productId) => {
   if (!product) throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
 
   if (cartItems) {
-    const item = await updateCartItem(userId, productId, 1);
-    return item;
+    await updateCartItem(userId, productId, 1);
+    return { message: 'Item Quantity Increase' };
   }
 
   if (product.stock_quantity === 0) throw new ApiError(httpStatus.BAD_REQUEST, `Stock Un-available ${product.name}`);
@@ -177,11 +176,11 @@ const addToCart = async (userId, productId) => {
     user_id: convertToObjectId(userId),
   });
 
-  const savedItem = await cartItem.save();
+  await cartItem.save();
 
   await addItemToUserCartArray(userId, cartItem._id);
 
-  return savedItem;
+  return { message: 'Item Added to Cart' };
 };
 
 module.exports = {

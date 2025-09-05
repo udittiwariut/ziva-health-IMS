@@ -29,11 +29,11 @@ const updateCart = catchAsync(async (req, res) => {
 });
 
 const removeItemFromCart = catchAsync(async (req, res) => {
-  const { userId, productId } = req.params;
+  const { userId, cartItemId } = req.params;
 
-  await removeItem(userId, productId);
+  await removeItem(userId, cartItemId);
 
-  res.status(httpStatus.NO_CONTENT).send();
+  res.send({ message: 'Item removed for the cart successfully' });
 });
 
 module.exports = {

@@ -11,6 +11,81 @@ const getOrderById = async (id) => {
   return Orders.findById(orderId);
 };
 
+const fetchUserOrder = async (userId, status) => {
+  if (!Users.isValidUserId(userId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid User Id');
+  }
+
+  const orderDocs = await Orders.find({ user_id: convertToObjectId(userId), status: status.toLowerCase() }, { _id: 1 });
+
+  const orderIds = orderDocs.map((doc) => doc._id);
+
+  const orders = await OrderItems.aggregate([
+    {
+      $match: {
+        order_id: { $in: orderIds },
+        isDeleted: false,
+      },
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'product_id',
+        foreignField: '_id',
+        as: 'product',
+      },
+    },
+    { $unwind: '$product' },
+    {
+      $addFields: {
+        taxRate: 0.12,
+        itemTotalWithoutTax: { $multiply: ['$quantity', '$price_at_time'] },
+      },
+    },
+    {
+      $addFields: {
+        itemTotalWithTax: {
+          $multiply: ['$itemTotalWithoutTax', { $add: [1, '$taxRate'] }],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        quantity: 1,
+        product_id: 1,
+        order_id: 1,
+        price_at_time: 1,
+        'product.name': 1,
+        'product.sku': 1,
+        itemTotalWithoutTax: 1,
+        itemTotalWithTax: 1,
+        taxRate: 1,
+        createdAt: 1,
+      },
+    },
+    {
+      $group: {
+        _id: '$order_id',
+        items: { $push: '$$ROOT' },
+        totalPriceWithoutTax: { $sum: '$itemTotalWithoutTax' },
+        totalPriceWithTax: { $sum: '$itemTotalWithTax' },
+        taxRate: { $first: '$taxRate' },
+        orderDate: { $first: '$createdAt' },
+      },
+    },
+    {
+      $addFields: {
+        orderStatus: status,
+        itemsCount: { $size: '$items' },
+      },
+    },
+    { $sort: { orderDate: -1 } },
+  ]);
+
+  return orders;
+};
+
 const createNewOrder = async (userId) => {
   if (!Users.isValidUserId(userId)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid User Id');
@@ -18,7 +93,8 @@ const createNewOrder = async (userId) => {
   const user = await Users.findOne({ _id: convertToObjectId(userId) });
   if (user.cart.length === 0) throw new ApiError(httpStatus.BAD_REQUEST, 'Cart is Empty');
 
-  await purchaseQueue.add('placeOrder', { userId }, { removeOnComplete: true, removeOnFail: true });
+  const job = await purchaseQueue.add('placeOrder', { userId }, { removeOnComplete: 60 * 10, removeOnFail: 60 * 10 });
+  return job.id;
 };
 
 const fullFillOrder = async (orderId) => {
@@ -95,16 +171,30 @@ const updateProductStock = async (id, action = 'reserve', session = null) => {
 };
 
 const cancelOrder = async (orderId) => {
-  await Promise.all[
-    Orders.updateOne(
-      { _id: convertToObjectId(orderId) },
-      { $set: { status: 'cancelled' } },
-      updateProductStock(orderId, 'restock')
-    )
-  ];
+  await Promise.all([
+    Orders.updateOne({ _id: convertToObjectId(orderId) }, { $set: { status: 'cancelled' } }),
+    updateProductStock(orderId, 'restock'),
+  ]);
 };
 
-// id can be userId or OrderId
+const checkOrderStatus = async (jobId) => {
+  const job = await purchaseQueue.getJob(jobId);
+
+  if (!job) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Order Not Found');
+  }
+
+  const state = await job.getState();
+  if (state === 'completed') {
+    return { status: state, message: 'Order Placed Successfully', orderId: job.returnvalue.id };
+  }
+
+  if (state === 'failed') {
+    throw new ApiError(httpStatus.BAD_REQUEST, job.failedReason);
+  }
+
+  return { status: state, message: 'Please wait order is processing' };
+};
 
 module.exports = {
   getOrderById,
@@ -112,4 +202,6 @@ module.exports = {
   updateProductStock,
   fullFillOrder,
   cancelOrder,
+  checkOrderStatus,
+  fetchUserOrder,
 };

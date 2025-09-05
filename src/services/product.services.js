@@ -3,7 +3,7 @@ const { Products, Categories } = require('../models');
 const ApiError = require('../utils/ApiError');
 const convertToObjectId = require('../utils/convertToObjectId');
 
-const queryProducts = async (filter, options = undefined) => {
+const queryProducts = async (filter) => {
   const products = await Products.find(filter);
 
   return products;
@@ -24,6 +24,7 @@ const createProduct = async (productBody) => {
     price: Number(productBody.price),
     stock_quantity: productBody.stock_quantity,
     category_id: categoryId,
+    image_url: productBody.image_url,
   });
 
   const savedProduct = await product.save();

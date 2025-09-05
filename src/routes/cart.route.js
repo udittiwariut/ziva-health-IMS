@@ -8,9 +8,8 @@ const router = express.Router();
 
 router.route('/:userId').get(cartController.getUserCart).post(validate(cartValidation.getCart), cartController.getUserCart);
 
-router
-  .route('/:userId/:productId')
-  .put(validate(cartValidation.updateCart), cartController.updateCart)
-  .delete(validate(cartValidation.removeItem), cartController.removeItemFromCart);
+router.route('/:userId/:productId').put(validate(cartValidation.updateCart), cartController.updateCart);
+
+router.route('/:userId/:cartItemId').delete(validate(cartValidation.removeItem), cartController.removeItemFromCart);
 
 module.exports = router;

@@ -9,7 +9,7 @@ const config = require('../config/config');
 const { cancelQueue } = require('./purchaseQueue');
 const mongoose = require('mongoose');
 
-const DELAY = 10 * 60 * 1000;
+const DELAY = 1 * 60 * 1000;
 
 const processOrderWorker = new Worker(
   'purchaseQueue',
@@ -17,15 +17,18 @@ const processOrderWorker = new Worker(
     if (job.name === 'placeOrder') {
       const { userId } = job.data;
 
-      const { items, totalPrice } = await queryCartItem(userId);
+      const { items, totalPriceWithTax } = await queryCartItem(userId);
 
-      const item = items.find((item) => item.quantity > item.stock);
+      const outOfStockItems = items.filter((item) => item.quantity > item.product.stock_quantity);
 
-      if (item) throw new Error(`One or more Products on the cart are out of stock ${item.product.sku}`);
+      if (outOfStockItems.length > 0)
+        throw new Error(
+          `One or more Products on the cart are out of stock ${outOfStockItems.map((item) => item.product.sku).join(', ')}`
+        );
 
       const newOrder = new Orders({
         user_id: convertToObjectId(userId),
-        total: totalPrice,
+        total: totalPriceWithTax,
       });
 
       const orderItems = items.map((item) => {
@@ -50,7 +53,13 @@ const processOrderWorker = new Worker(
 
         session.endSession();
 
-        await cancelQueue.add('cancelOrder', { orderId: newOrder._id }, { delay: DELAY });
+        await cancelQueue.add(
+          'cancelOrder',
+          { orderId: newOrder.id },
+          { delay: DELAY, removeOnComplete: true, removeOnFail: true }
+        );
+
+        return newOrder;
       } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -68,6 +77,8 @@ const timeOutOrderWorker = new Worker(
       const { orderId } = job.data;
 
       const order = await Orders.findOne({ _id: convertToObjectId(orderId) });
+
+
       if (order && order.status === 'pending') {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -75,7 +86,6 @@ const timeOutOrderWorker = new Worker(
           await updateProductStock(orderId, 'restock', session);
           await Orders.updateOne({ _id: orderId }, { $set: { isDeleted: true } }, { session });
           await OrderItems.updateMany({ order_id: orderId }, { $set: { isDeleted: true } }, { session });
-          console.log('Canaled');
 
           await session.commitTransaction();
           session.endSession();
@@ -86,6 +96,7 @@ const timeOutOrderWorker = new Worker(
         }
       }
     }
+    console.log('Cancel Worker: Order was confirmed');
   },
   { connection: config.redis }
 );

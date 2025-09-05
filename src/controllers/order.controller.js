@@ -1,15 +1,21 @@
 const httpStatus = require('http-status');
 
 const catchAsync = require('../utils/catchAsync');
-const { createNewOrder, fullFillOrder, cancelOrder, getOrderById } = require('../services/order.services');
+const {
+  createNewOrder,
+  fullFillOrder,
+  cancelOrder,
+  getOrderById,
+  checkOrderStatus,
+  fetchUserOrder,
+} = require('../services/order.services');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 
 const createOrder = catchAsync(async (req, res) => {
   const { userId } = req.params;
-  await createNewOrder(userId);
-
-  res.send('Order Placed Successfully');
+  const jobId = await createNewOrder(userId);
+  res.send({ jobId, message: 'Processing Your Order' });
 });
 
 const getOrderDetailById = catchAsync(async (req, res) => {
@@ -30,24 +36,43 @@ const updateOrderStatus = catchAsync(async (req, res) => {
   if (order.status === 'cancelled')
     throw new ApiError(httpStatus.BAD_REQUEST, `Order is cancelled cannot rewrite it's status`);
 
-  if (order.status === status) throw new ApiError(httpStatus.BAD_REQUEST, `Invalid Request`);
+  if (order.status === status) throw new ApiError(httpStatus.BAD_REQUEST, `Order Not Found`);
 
   if (status === 'confirmed') {
-    fullFillOrder(orderId);
+    await fullFillOrder(orderId);
     res.send({ message: 'Order Placed successfully' });
     return;
   }
   if (status === 'cancelled') {
-    cancelOrder(orderId);
+    await cancelOrder(orderId);
     res.send({ message: 'Order Cancelled successfully' });
   }
 });
 
-const processOrder = async () => {};
+// id is JOb ID
+const getOrderStatus = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const status = await checkOrderStatus(id);
+
+  return res.send(status);
+});
+
+// id is USER ID
+const getUserOrder = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+
+  const { status } = pick(req.query, ['status']);
+
+  const orders = await fetchUserOrder(userId, status);
+
+  return res.send(orders);
+});
 
 module.exports = {
   createOrder,
   getOrderDetailById,
   updateOrderStatus,
-  processOrder,
+  getOrderStatus,
+  getUserOrder,
 };
